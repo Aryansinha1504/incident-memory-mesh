@@ -32,22 +32,23 @@ Mesh makes that loop inspectable in the investigation workspace. The
 **Provenance graph** follows one focused path instead of showing an unreadable
 database dump:
 
-```text
-Current incident
-      ↓
-Persisted agent handoffs
-      ↓
-Recalled or newly created memory
-      ↓
-Source incident + analyst decision
+```mermaid
+flowchart LR
+    triage["Triage Agent"] -->|CREATED| handoff["Investigator Handoff"]
+    current["Current Incident"] -->|HAS_HANDOFF| handoff
+    memory["Recalled Memory"] -->|RECALLED_IN| handoff
+    memory -->|DERIVED_FROM| source["Source Incident"]
+    decision["Analyst Decision"] -->|ABOUT| source
 ```
 
-Each memory can be followed back to the incident that produced it. Each
-handoff shows which specialist owned the work. The graph answers not only
-“what did the system remember?” but also “why is this memory connected to this
-investigation?”
+Read the center path from the current investigation: the incident owns an
+investigator handoff, that handoff records which memory was recalled, and the
+memory points to the earlier incident that produced it. The analyst decision
+is attached to that source incident, so an approved procedure is not an
+unattributed instruction. The same graph can also show the agents that created
+and received each handoff.
 
-## Why use a graph for this?
+## How the graph records the relationships
 
 A collection of notes can tell us what was remembered. A graph can also show how each record relates to the work that produced or reused it.
 
@@ -62,19 +63,39 @@ Mesh models that history with tenant-scoped nodes:
 | `Audit` | An event and its actor, detail, and time |
 | `Decision` | The analyst’s accepted or rejected response decision |
 
-Edges make the provenance inspectable:
+The relationships make the provenance inspectable. The arrow points from the
+record that owns or describes the relationship to the record it references:
 
-```text
-(Memory)-[:DERIVED_FROM]->(Incident)
-(Incident)-[:HAS_HANDOFF]->(Handoff)-[:FOR_INCIDENT]->(Incident)
-(Agent)-[:CREATED]->(Handoff)
-(Agent)-[:ASSIGNED]->(Handoff)
-(Memory)-[:RECALLED_IN]->(Handoff)
-(Audit)-[:ABOUT]->(Incident)
-(Decision)-[:ABOUT]->(Incident)
+| Relationship | Meaning in the workflow |
+| --- | --- |
+| `Incident-[:HAS_HANDOFF]->Handoff` | The incident’s persisted work queue and specialist history |
+| `Handoff-[:FOR_INCIDENT]->Incident` | The case a handoff belongs to; this is the reverse traversal of `HAS_HANDOFF` |
+| `Agent-[:CREATED]->Handoff` | The specialist that created the task |
+| `Agent-[:ASSIGNED]->Handoff` | The specialist responsible for receiving the task |
+| `Memory-[:RECALLED_IN]->Handoff` | The memory used while completing that handoff |
+| `Memory-[:DERIVED_FROM]->Incident` | The incident that produced the memory |
+| `Audit-[:ABOUT]->Incident` | The case an audit event describes |
+| `Decision-[:ABOUT]->Incident` | The case and recommendation covered by an analyst decision |
+
+In graph form, the complete set of edges looks like this:
+
+```mermaid
+flowchart LR
+    incident["Incident"] -->|HAS_HANDOFF| handoff["Handoff"]
+    handoff -->|FOR_INCIDENT| incident
+    creator["Creating Agent"] -->|CREATED| handoff
+    assignee["Assigned Agent"] -->|ASSIGNED| handoff
+    memory["Memory"] -->|RECALLED_IN| handoff
+    memory -->|DERIVED_FROM| incident
+    audit["Audit"] -->|ABOUT| incident
+    decision["Decision"] -->|ABOUT| incident
 ```
 
-For example, recall can be followed from the current incident to its investigator handoff, from that handoff to a recalled memory, and from the memory back to its source incident. That relationship is the difference between “the system returned a note” and “the system can show which prior case produced knowledge used here.”
+For example, recall can be followed from the current incident to its
+investigator handoff, from that handoff to a recalled memory, and from the
+memory back to its source incident. That relationship is the difference between
+“the system returned a note” and “the system can show which prior case produced
+knowledge used here.”
 
 ## FalkorDB is part of the workflow
 
@@ -144,7 +165,3 @@ This creates a useful next step: use durable jobs and atomic handoff claiming, t
 The next engineering steps are to evaluate recall against a labeled set of synthetic cases, make handoff recovery robust to interrupted workflows, and add real authentication before connecting any multi-user environment. A future worker could use an LLM, but its memories and decisions should still carry provenance and remain reviewable.
 
 Mesh takes a deliberately small step toward agents that remember: persist the work as a graph, make handoffs visible, and let the next investigation benefit from what the previous one learned.
-
-## AI assistance disclosure
-
-OpenAI Codex assisted with code generation and refactoring, interface and backend changes, automated tests, and documentation. This disclosure describes the assistance used; it does not assert that participant review, contribution, or hackathon eligibility requirements have been satisfied.

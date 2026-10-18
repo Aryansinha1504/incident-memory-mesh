@@ -1,0 +1,26 @@
+name: memory-mesh
+services:
+  falkordb:
+    # Verified image: FalkorDB module 4.22.1. Pin prevents demo-day drift.
+    image: falkordb/falkordb@sha256:b0bdcac2cbaff989e77cb0610439b7a9289e86de033ccbbd4368b66fb680ae7a
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - mesh-graph-data:/var/lib/falkordb/data
+    command:
+      - redis-server
+      - --loadmodule
+      - /var/lib/falkordb/bin/falkordb.so
+      - --dir
+      - /var/lib/falkordb/data
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "PING"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  mesh-graph-data:

@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+memory_mesh.db
+memory_mesh.db-shm
+memory_mesh.db-wal
+node_modules/
+.env
+.venv/

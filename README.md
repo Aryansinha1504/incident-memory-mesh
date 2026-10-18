@@ -2,7 +2,7 @@
 
 Hackathon track: **Agent Memory and Coordination** (intended entry).
 
-The production application requires FalkorDB for its essential memory and coordination workflow. SQLite is retained only for tests that explicitly construct `MemoryService(path)`. See [the saved rules and submission checklist](HACKATHON_RULES.md).
+The production application requires FalkorDB for its essential memory and coordination workflow. SQLite is retained only for tests that explicitly construct `MemoryService(path)`.
 
 A local demonstration of a security team that remembers. Three specialized Python workers investigate a reported authentication incident, share structured findings, and leave persistent knowledge for the next investigation.
 

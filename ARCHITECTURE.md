@@ -195,6 +195,7 @@ Legacy JSON fields such as `similar_incidents`, `duplicate_steps`, and `useful_m
 - Tenant changes clear old data immediately. Request counters ignore late responses from earlier selections.
 - Writes disable competing writes. POST requests are not auto-retried because case creation is not idempotent.
 - Tabs preserve unsent analyst notes.
+- The provenance graph renders a focused evidence path for the selected case: incident, persisted handoffs, recalled/created memories, source incidents, and analyst decision. It is intentionally a readable case graph, not a full database visualization.
 - Errors appear in the form or workspace banner.
 - Server-provided text is HTML-escaped.
 - Reference and incomplete cases explain why no approval is available.

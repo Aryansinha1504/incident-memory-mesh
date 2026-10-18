@@ -46,7 +46,7 @@ class HTTPTests(unittest.TestCase):
             return response.status, response.headers, response.read()
 
     def test_assets_have_types_and_are_not_cached(self):
-        for route, mime in (("/", "text/html"), ("/static/app.js", "text/javascript"), ("/static/app.css", "text/css"), ("/favicon.svg", "image/svg+xml")):
+        for route, mime in (("/", "text/html"), ("/blog", "text/html"), ("/static/app.js", "text/javascript"), ("/static/app.css", "text/css"), ("/static/blog.css", "text/css"), ("/favicon.svg", "image/svg+xml")):
             status, headers, body = self.request(route)
             self.assertEqual(status, 200)
             self.assertIn(mime, headers["Content-Type"])

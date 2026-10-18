@@ -26,6 +26,7 @@ FalkorDB stores the production graph in `memory_mesh_v2` by default. Restarting 
 | Area | Purpose |
 | --- | --- |
 | Investigations | Create a case, search the recent inbox, inspect outputs, approve/reject a recommendation, export JSON |
+| Provenance graph | Trace the current case through persisted handoffs, recalled/created memories, source incidents, and analyst decisions |
 | Memory trail | Separate recalled context from newly saved knowledge; open source incidents |
 | Activity log | Inspect timestamped events and analyst notes |
 | Handoff JSON | Inspect structured records passed between workers |
@@ -40,9 +41,10 @@ Selecting an incident, changing tabs, refreshing, and searching only read data. 
 1. Choose **+ New demo workspace**. Use a unique name such as “Judges demo 1” so it starts with no history.
 2. Click **New investigation**, choose **Admin account**, keep the analyst ID, and run it.
 3. Show the three agent outputs and recommendation. In **Memory trail**, this first case has no recalled memories and two saved records: episodic and semantic.
-4. Add a note and click **Approve & save procedure**. A third, procedural memory appears. No token is actually disabled.
-5. Run the same scenario again with the same analyst ID. Open **Recalled** and follow a source link back to the first case. This demonstrates persistent context reuse.
-6. Refresh to show persistence. Open **Memory library**, then switch to another fresh workspace to demonstrate tenant-scoped reads.
+4. Open **Provenance graph** to show the case → handoffs → memory path, then open **Memory trail** for the full records.
+5. Add a note and click **Approve & save procedure**. A third, procedural memory appears. No token is actually disabled.
+6. Run the same scenario again with the same analyst ID. Open **Provenance graph** and follow a source link back to the first case. This makes persistent context reuse visible.
+7. Refresh to show persistence. Open **Memory library**, then switch to another fresh workspace to demonstrate tenant-scoped reads.
 7. Optionally reject another case. Its feedback is recorded without saving a new procedure.
 
 Suggested pitch:

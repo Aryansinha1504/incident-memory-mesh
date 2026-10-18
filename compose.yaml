@@ -22,5 +22,22 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      falkordb:
+        condition: service_healthy
+    environment:
+      MEMORY_MESH_HOST: 0.0.0.0
+      MEMORY_MESH_PORT: 8000
+      FALKORDB_HOST: falkordb
+      FALKORDB_PORT: 6380
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
 volumes:
   mesh-graph-data:

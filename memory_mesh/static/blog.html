@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#151a29" />
+    <meta name="description" content="How Mesh gives a small incident-response team persistent, shared memory." />
+    <title>The second investigation should start smarter — Mesh</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/blog.css" />
+  </head>
+  <body>
+    <header class="blog-nav">
+      <a class="brand" href="/" aria-label="Open Mesh demo"><img src="/favicon.svg" alt="" /> <span>mesh<span class="dot">.</span></span></a>
+      <div class="nav-links"><span>HACKATHON BUILD LOG</span><a href="/">Open live demo <span aria-hidden="true">↗</span></a></div>
+    </header>
+    <main>
+      <section class="hero">
+        <p class="kicker">AGENT MEMORY AND COORDINATION</p>
+        <h1>The second investigation should start smarter.</h1>
+        <p class="dek">How Mesh uses FalkorDB to give a small team of specialist agents persistent, shared memory.</p>
+        <div class="hero-meta"><span>Technical project story</span><span>·</span><span>Incident Response Memory Mesh</span></div>
+      </section>
+
+      <article class="article">
+        <p class="lead">Imagine investigating the same kind of security alert for the third time this week. The first investigation uncovered a useful pattern. An analyst approved a response. Yet the next investigator starts with an empty page and repeats the work.</p>
+        <p>That is the problem Mesh explores: <strong>how can agents carry useful knowledge between investigations, share it with one another, and show where that knowledge came from?</strong></p>
+        <p>Mesh is a local demonstration built for the <strong>Agent Memory and Coordination</strong> hackathon track. It models a small incident-response team with three specialist workers. The workers are deterministic Python functions, and their shared operational memory lives in FalkorDB.</p>
+
+        <h2>A memory loop, not a one-shot answer</h2>
+        <p>The demo begins with a report such as “Repeated login failures for an admin from a suspicious IP and shared device.” Triage classifies it and hands it to an investigator. The investigator searches tenant-scoped memories, records an episodic account and a semantic pattern, then hands findings to response. Response suggests an action for an analyst to review.</p>
+        <p>If the analyst approves the recommendation, Mesh stores a procedural memory. When a similar report arrives later, the investigator can retrieve that procedure and the earlier case that produced it.</p>
+        <div class="flow"><span>Incident</span><b>→</b><span>Triage</span><b>→</b><span>Investigator</span><b>→</b><span>Recall</span><b>→</b><span>Response</span><b>→</b><span>Analyst decision</span></div>
+
+        <h2>Why use a graph for this?</h2>
+        <p>A collection of notes can tell us what was remembered. A graph can also show how each record relates to the work that produced or reused it.</p>
+        <div class="schema"><div><span class="node">Incident</span><i>HAS_HANDOFF</i><span class="node">Handoff</span><i>RECALLED_IN</i><span class="node">Memory</span></div><small>Every memory can be traced back to its source incident; every handoff keeps its owner, task, findings, and lifecycle.</small></div>
+        <p>Mesh stores incidents, memories, agents, handoffs, audits, and analyst decisions as tenant-scoped nodes. Edges capture relationships such as <code>DERIVED_FROM</code>, <code>FOR_INCIDENT</code>, <code>CREATED</code>, <code>RECALLED_IN</code>, and <code>ABOUT</code>. That provenance is the difference between “the system returned a note” and “the system can show why this note is part of this investigation.”</p>
+
+        <h2>FalkorDB is part of the workflow</h2>
+        <p>FalkorDB is the production source of truth in Mesh. The application reads and writes incidents, memories, handoffs, audits, decisions, dashboard data, and history through graph queries. Startup requires FalkorDB; an unavailable graph produces a clear startup error. SQLite is used only by tests that explicitly construct the test backend.</p>
+        <pre><code>MATCH (m:Memory)-[:DERIVED_FROM]-&gt;(i:Incident)
+WHERE m.tenant_id = $tenant_id
+  AND i.tenant_id = $tenant_id
+  AND i.id = $incident_id
+RETURN m, i</code></pre>
+        <p>The investigator currently uses explainable keyword overlap rather than embeddings. It ranks matches using shared words, memory-type priority, stored confidence, and a small same-user relevance boost. That keeps the demo inspectable while making clear that the score is a heuristic, not a calibrated probability.</p>
+
+        <h2>Coordination records that survive a refresh</h2>
+        <p>The workers run sequentially in one process. Their handoffs are still persisted as graph records with a simple lifecycle:</p>
+        <div class="lifecycle"><span>pending</span><b>→</b><span>claimed</span><b>→</b><span>completed</span></div>
+        <p>This lets someone inspect which worker owned a task, what findings were passed, and when the handoff changed state. The <code>RECALLED_IN</code> edge records which memories the investigator used. Audits record important events, and the analyst decision is represented as its own graph node.</p>
+
+        <aside class="callout"><strong>The honest boundary</strong><p>Mesh is a prototype for exploring agent memory, not an intrusion-detection product. It does not call an LLM, inspect live telemetry, or execute mitigations. The sample incidents are synthetic, and approval means an analyst accepted a simulated recommendation.</p></aside>
+
+        <h2>What we built for the hackathon</h2>
+        <div class="build-grid"><div><strong>Persistent memory</strong><span>FalkorDB-backed episodic, semantic, and procedural records.</span></div><div><strong>Visible coordination</strong><span>Two durable handoffs per workflow, with owners and status.</span></div><div><strong>Traceable decisions</strong><span>Analyst notes, audits, source links, and exportable case JSON.</span></div><div><strong>Scoped workspaces</strong><span>Tenant filters across graph reads, library queries, and recall.</span></div></div>
+
+        <h2>Try the memory loop</h2>
+        <ol><li>Open the <a href="/">live Mesh demo</a> and create a fresh workspace.</li><li>Run the admin-login scenario and inspect the three agent outputs.</li><li>Approve the simulated recommendation to save a procedural memory.</li><li>Run the scenario again and follow the recalled memory back to its source incident.</li><li>Refresh the page or switch workspaces to see persistence and tenant-scoped results.</li></ol>
+        <p>The second run is the heart of the demo. It makes the central question observable: can an agent team carry forward useful experience, and can a person trace that experience back to its source?</p>
+
+        <h2>What comes next</h2>
+        <p>The next engineering steps are to evaluate recall against labeled synthetic cases, make handoff recovery robust to interrupted workflows, and add real authentication before connecting a multi-user environment. A future worker could use an LLM, but its memories and decisions should still carry provenance and remain reviewable.</p>
+        <p>Mesh takes a deliberately small step toward agents that remember: persist the work as a graph, make handoffs visible, and let the next investigation benefit from what the previous one learned.</p>
+        <footer><span>AI assistance disclosure</span><p>OpenAI Codex assisted with code generation and refactoring, interface and backend changes, automated tests, and documentation. This disclosure describes the assistance used; it does not assert that participant review, contribution, or hackathon eligibility requirements have been satisfied.</p></footer>
+      </article>
+    </main>
+  </body>
+</html>

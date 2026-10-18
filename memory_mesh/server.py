@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 from .config import HOST, MAX_REQUEST_BYTES, PORT
 from .service import MemoryService
-from .ui import ASSETS, HTML
+from .ui import ASSETS, BLOG_HTML, HTML
 
 service = MemoryService()
 
@@ -52,6 +52,9 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if parsed.path == "/":
                 self.send_bytes(HTML.encode(), "text/html; charset=utf-8")
+                return
+            if parsed.path == "/blog":
+                self.send_bytes(BLOG_HTML.encode(), "text/html; charset=utf-8")
                 return
             if parsed.path in ASSETS:
                 path, content_type = ASSETS[parsed.path]

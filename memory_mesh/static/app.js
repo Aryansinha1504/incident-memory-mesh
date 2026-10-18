@@ -38,7 +38,7 @@
     incident: null,
     selectedId: params.get("incident"),
     queue: "all",
-    tab: "memory",
+    tab: "graph",
     memoryFilter: "all",
     busy: false,
     dashboardRequest: 0,
@@ -356,7 +356,7 @@
       );
       if (request !== state.incidentRequest || tenant !== state.tenant) return;
       state.incident = data;
-      state.tab = "memory";
+      state.tab = "graph";
       state.memoryFilter = "all";
       renderIncident();
     } catch (error) {
@@ -370,6 +370,7 @@
   }
   function renderIncident() {
     const item = state.incident;
+    $("#view-investigations").classList.toggle("has-selection", Boolean(item));
     if (!item) {
       $("#incident-detail").innerHTML =
         '<section class="panel empty-state"><div class="empty-icon">' +
@@ -469,6 +470,7 @@
           's. Assigned by the demo’s prior-workflow rule, not elapsed time. <button class="text-button" data-view="guide">Understand the model ↗</button></p>') +
       '<div class="record-tabs" role="group" aria-label="Investigation details">' +
       [
+        ["graph", "Provenance graph", "activity"],
         ["memory", "Memory trail", "layers"],
         ["activity", "Activity log", "activity"],
         ["json", "Handoff JSON", "code"],
@@ -551,6 +553,7 @@
     );
   }
   function renderRecord(item) {
+    if (state.tab === "graph") return renderGraph(item);
     if (state.tab === "json")
       return (
         '<p class="tab-intro">Structured handoffs stored for this incident. Fields describe the demo workers’ outputs.</p><pre class="code-block">' +
@@ -616,6 +619,67 @@
       '</div></div><p class="tab-intro">Recalled = existing context read by the investigator. Saved here = records linked to this case. Confidence is heuristic, not measured accuracy.</p>' +
       (cards.join("") ||
         '<p class="empty-text">No memories in this view. A fresh workspace has nothing to recall until its first investigation saves knowledge.</p>')
+    );
+  }
+
+  function graphNode(kind, title, detail, extra = "") {
+    return (
+      '<div class="graph-node ' + kind + '"><span class="graph-node-kind">' +
+      esc(kind) + '</span><strong>' + esc(title) + '</strong><span>' +
+      esc(detail) + '</span>' + extra + '</div>'
+    );
+  }
+
+  function renderGraph(item) {
+    const recalled = item.retrieved_memories || [];
+    const created = item.memories || [];
+    const sourceIds = [...new Set(
+      recalled.map((memory) => memory.source_incident_id).filter(Boolean),
+    )];
+    const decision = decisionOf(item);
+    const handoffs = item.handoffs || [];
+    const memoryCount = recalled.length + created.length;
+    const sourceNodes = sourceIds.length
+      ? sourceIds.map((id) =>
+          '<button class="graph-source" data-action="open-source" data-id="' +
+          esc(id) + '">↗ Source incident ' + esc(id.replace("inc_", "")) + '</button>',
+        ).join("")
+      : '<span class="graph-muted">No prior source incident was recalled.</span>';
+    const memoryNodes = memoryCount
+      ? recalled.map((memory) => graphNode(
+          "memory recalled",
+          memory.type + " memory",
+          memory.content,
+          '<small>↗ ' + esc(memory.source_incident_id ? "linked to source" : "no source link") + '</small>',
+        )).join("") + created.map((memory) => graphNode(
+          "memory created",
+          memory.type + " memory",
+          memory.content,
+          '<small>new knowledge from this case</small>',
+        )).join("")
+      : '<span class="graph-muted">This case has not saved or recalled memory yet.</span>';
+    return (
+      '<div class="graph-intro"><div><p class="tab-intro">A focused view of the records connected to this investigation.</p>' +
+      '<p class="graph-explain"><strong>Trace the evidence:</strong> current case → persisted handoffs → recalled or created memory → source incident.</p></div>' +
+      '<div class="graph-metrics"><span><strong>' + esc(handoffs.length) + '</strong> handoffs</span><span><strong>' + esc(recalled.length) + '</strong> recalled</span><span><strong>' + esc(created.length) + '</strong> created</span></div></div>' +
+      '<div class="provenance-graph" aria-label="Provenance graph for ' + esc(item.id) + '"><div class="graph-board">' +
+      '<div class="graph-column"><div class="graph-lane-label">CURRENT CASE</div>' +
+      graphNode("incident", item.id, item.description) + '</div>' +
+      '<div class="graph-connector" aria-hidden="true">→</div>' +
+      '<div class="graph-column"><div class="graph-lane-label">PERSISTED HANDOFFS</div><div class="graph-node-grid">' +
+      (handoffs.length ? handoffs.map((handoff) => graphNode(
+        "handoff",
+        pretty(handoff.from_agent) + " → " + pretty(handoff.to_agent),
+        handoff.task,
+        '<small>' + esc(pretty(handoff.status)) + '</small>',
+      )).join("") : '<span class="graph-muted">No handoffs recorded.</span>') +
+      '</div></div><div class="graph-connector" aria-hidden="true">→</div>' +
+      '<div class="graph-column"><div class="graph-lane-label">MEMORY CONNECTIONS</div><div class="graph-node-grid">' +
+      memoryNodes + '</div></div></div>' +
+      '<div class="graph-sources"><div><div class="graph-lane-label">PROVENANCE</div>' + sourceNodes + '</div>' +
+      '<div class="graph-decision"><div class="graph-lane-label">ANALYST DECISION</div>' +
+      graphNode("decision", decision ? pretty(decision.decision) : "Awaiting review", decision ? "Recorded analyst feedback" : "No action executed") +
+      '</div></div></div>'
     );
   }
   async function loadLibrary(append = false) {
@@ -729,7 +793,7 @@
       });
       state.incident = result;
       state.selectedId = result.id;
-      state.tab = "memory";
+      state.tab = "graph";
       state.memoryFilter = "all";
       $("#incident-dialog").close();
       state.queue = "all";
